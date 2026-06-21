@@ -1,0 +1,6 @@
+{
+  "name": "Inventory Management System",
+  "description": "Comprehensive full-stack Inventory Management System featuring product CRUD, categories, brands, orders, customer and employee management, role-based access control, low stock auto email alerts, and PDF invoices.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

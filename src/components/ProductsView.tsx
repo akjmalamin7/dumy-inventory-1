@@ -2,12 +2,13 @@ import React, { useState } from 'react';
 import { 
   Plus, Edit2, Trash2, Search, Filter, AlertTriangle, ShieldCheck, Check, Database, X 
 } from 'lucide-react';
-import { Product, Category, Brand, User } from '../types.js';
+import { Product, Category, Brand, User, Supplier } from '../types.js';
 
 interface ProductsViewProps {
   products: Product[];
   categories: Category[];
   brands: Brand[];
+  suppliers: Supplier[];
   activeUser: User;
   onAddProduct: (prod: Partial<Product>) => Promise<any>;
   onUpdateProduct: (id: string, prod: Partial<Product>) => Promise<any>;
@@ -15,7 +16,7 @@ interface ProductsViewProps {
 }
 
 export default function ProductsView({ 
-  products, categories, brands, activeUser, onAddProduct, onUpdateProduct, onDeleteProduct 
+  products, categories, brands, suppliers, activeUser, onAddProduct, onUpdateProduct, onDeleteProduct 
 }: ProductsViewProps) {
   const isAdmin = activeUser.role === 'admin';
   const [search, setSearch] = useState('');
@@ -29,6 +30,7 @@ export default function ProductsView({
   const [formSku, setFormSku] = useState('');
   const [formCategory, setFormCategory] = useState('');
   const [formBrand, setFormBrand] = useState('');
+  const [formSupplier, setFormSupplier] = useState('');
   const [formPrice, setFormPrice] = useState('0');
   const [formCost, setFormCost] = useState('0');
   const [formQuantity, setFormQuantity] = useState('0');
@@ -42,6 +44,7 @@ export default function ProductsView({
     setFormSku('SKU-' + Math.floor(100000 + Math.random() * 900000));
     setFormCategory(categories[0]?.id || '');
     setFormBrand(brands[0]?.id || '');
+    setFormSupplier(suppliers[0]?.id || '');
     setFormPrice('1500');
     setFormCost('1100');
     setFormQuantity('20');
@@ -57,6 +60,7 @@ export default function ProductsView({
     setFormSku(p.sku);
     setFormCategory(p.categoryId);
     setFormBrand(p.brandId);
+    setFormSupplier(p.supplierId || '');
     setFormPrice(String(p.price));
     setFormCost(String(p.cost));
     setFormQuantity(String(p.quantity));
@@ -80,6 +84,7 @@ export default function ProductsView({
       sku: formSku,
       categoryId: formCategory,
       brandId: formBrand,
+      supplierId: formSupplier,
       price: Number(formPrice) || 0,
       cost: Number(formCost) || 0,
       quantity: Number(formQuantity) || 0,
@@ -116,6 +121,7 @@ export default function ProductsView({
   // Safe names finder helper
   const getCategoryName = (id: string) => categories.find(c => c.id === id)?.name || 'N/A';
   const getBrandName = (id: string) => brands.find(b => b.id === id)?.name || 'N/A';
+  const getSupplierName = (id?: string) => id ? suppliers.find(s => s.id === id)?.companyName || 'N/A' : 'N/A';
 
   // Filter products
   const filteredProducts = products.filter(p => {
@@ -226,6 +232,9 @@ export default function ProductsView({
                         </span>
                         <span className="block text-[11px] text-slate-500 font-medium">
                           ব্র্যান্ড: {getBrandName(p.brandId)}
+                        </span>
+                        <span className="block text-[10px] text-emerald-600 font-bold uppercase tracking-wider">
+                          সাপ্লায়ার: {getSupplierName(p.supplierId)}
                         </span>
                       </div>
                     </td>
@@ -363,9 +372,25 @@ export default function ProductsView({
                   <select
                     value={formBrand}
                     onChange={(e) => setFormBrand(e.target.value)}
-                    className="w-full px-3.5 py-2 text-xs border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-xl"
+                    className="w-full px-3.5 py-2 text-xs border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-xl bg-white"
                   >
                     {brands.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 text-xs font-bold mb-1">সরবরাহকারী (Supplier) *</label>
+                  <select
+                    value={formSupplier}
+                    onChange={(e) => setFormSupplier(e.target.value)}
+                    className="w-full px-3.5 py-2 text-xs border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-xl bg-white text-slate-800"
+                  >
+                    <option value="">সরবরাহকারী নির্বাচন করুন...</option>
+                    {suppliers.map(s => (
+                      <option key={s.id} value={s.id}>
+                        {s.companyName} ({s.name})
+                      </option>
+                    ))}
                   </select>
                 </div>
 

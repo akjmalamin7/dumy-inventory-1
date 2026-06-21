@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
-  TrendingUp, Package, Users, BadgeAlert, Coins, CircleDollarSign, Plus, Eye, ArrowRight, ShieldAlert 
+  TrendingUp, Package, Users, BadgeAlert, Coins, CircleDollarSign, Plus, Eye, ArrowRight, ShieldAlert, Sparkles, Gift
 } from 'lucide-react';
 import { User, LowStockAlertLog } from '../types.js';
 
@@ -34,6 +34,7 @@ interface DashboardViewProps {
 export default function DashboardView({ data, activeUser, onNavigate, alerts }: DashboardViewProps) {
   const { summary, lowStockItems, categoryDistribution, salesTimeline, recentOrders } = data;
   const isAdmin = activeUser.role === 'admin';
+  const [showBdaySmsNotice, setShowBdaySmsNotice] = useState(false);
 
   // Format money helper (BDT/Taka formatted)
   const formatCurrency = (amount: number) => {
@@ -43,8 +44,69 @@ export default function DashboardView({ data, activeUser, onNavigate, alerts }: 
   // Find max sales amount to scale custom SVG chart safely
   const maxSalesAmount = Math.max(...salesTimeline.map(s => s.amount), 1);
 
+  // Check if today is activeUser's birthday (Month and Date match)
+  const isBirthdayToday = () => {
+    if (!activeUser.birthDate) return false;
+    try {
+      const today = new Date();
+      const bdate = new Date(activeUser.birthDate);
+      return today.getDate() === bdate.getDate() && today.getMonth() === bdate.getMonth();
+    } catch (e) {
+      return false;
+    }
+  };
+
+  const isBday = isBirthdayToday();
+
+  // Auto trigger birthday SMS simulation once if today is birthday
+  useEffect(() => {
+    if (isBday) {
+      setShowBdaySmsNotice(true);
+    }
+  }, [isBday]);
+
   return (
     <div className="space-y-6" id="dashboard_view">
+      {/* Dynamic Happy Birthday Automated Greeting Banner */}
+      {isBday && (
+        <div className="bg-gradient-to-r from-pink-500 via-rose-500 to-amber-500 rounded-2xl p-6 text-white shadow-lg animate-bounce duration-1000 relative overflow-hidden ring-4 ring-rose-350">
+          <div className="absolute right-0 top-0 translate-x-1/4 -translate-y-1/4 opacity-15 text-white pointer-events-none">
+            <Gift className="w-64 h-64" />
+          </div>
+          
+          <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-4 text-center md:text-left flex-col md:flex-row">
+              <div className="w-16 h-16 rounded-full bg-white/20 border border-white/35 flex items-center justify-center animate-spin text-3xl">
+                🎂
+              </div>
+              <div>
+                <span className="inline-flex items-center gap-1 bg-white/25 px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-pink-100">
+                  <Sparkles className="w-3 h-3 text-amber-300" /> শুভ জন্মদিন (Happy Birthday!)
+                </span>
+                <h2 className="text-xl md:text-2xl font-black mt-1">শুভ জন্মদিন, প্রিয় {activeUser.name}! 🎉🎈</h2>
+                <p className="text-pink-50 text-xs mt-1.5 leading-relaxed max-w-2xl">
+                  আজকের এই বিশেষ দিনে আপনার দীর্ঘায়ু ও সর্বোচ্চ ব্যবসায়িক সাফল্য কামনা করছি। কোম্পানির তরফ থেকে আপনার মোবাইল নম্বরে (<span className="font-mono font-bold text-white">{activeUser.phone || 'রেজিস্ট্রার্ড মোবাইল'}</span>) একটি শুভেচ্ছা SMS স্বয়ংক্রিয়ভাবে প্রদান করা হয়েছে।
+                </p>
+              </div>
+            </div>
+
+            {showBdaySmsNotice && (
+              <div className="bg-white/15 border border-white/25 p-3 rounded-xl text-center md:text-right shrink-0">
+                <span className="block text-[10px] uppercase font-extrabold text-pink-105 text-white/90">মোবাইল গেটওয়ে স্থিতিঃ</span>
+                <span className="font-bold text-xs text-white block mt-0.5 animate-pulse">📡 SMS Sent and Generated Successfully!</span>
+                <button
+                  type="button"
+                  onClick={() => alert(`📱 SMS SIMULATOR:\nTo: ${activeUser.phone || '+8801700000002'}\nMessage: "শুভ জন্মদিন, প্রিয় ${activeUser.name}! আপনার এই বিশেষ শুভদিনে আমাদের পুরো টিমের পক্ষ থেকে শুভকামনা। আপনার দিনটি আনন্দময় কাটুক! - Inventory Management Ltd."`)}
+                  className="mt-2 text-[9px] bg-white text-rose-600 px-2 py-1 rounded-lg font-black uppercase hover:bg-pink-50 transition cursor-pointer"
+                >
+                  টেস্ট SMS রশিদ দেখুন
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Header Banner */}
       <div className="bg-gradient-to-r from-slate-900 to-slate-800 rounded-2xl p-6 text-white shadow-sm flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>

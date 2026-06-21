@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { 
   User as UserIcon, Shield, Mail, Phone, Calendar, Briefcase, Coins, Send, Check, X, 
-  AlertCircle, RefreshCw, FileText, Landmark, Key, HeartHandshake, CheckCircle2, UserCheck
+  AlertCircle, RefreshCw, FileText, Landmark, Key, HeartHandshake, CheckCircle2, UserCheck, Award, Flame, Sparkles
 } from 'lucide-react';
-import { User, Employee, SalaryPayment, Loan, AdvanceSalaryRequest } from '../types';
+import { User, Employee, SalaryPayment, Loan, AdvanceSalaryRequest, Order } from '../types';
 
 interface MyProfileViewProps {
   activeUser: User;
@@ -11,13 +11,26 @@ interface MyProfileViewProps {
   salaries: SalaryPayment[];
   loans: Loan[];
   advanceRequests: AdvanceSalaryRequest[];
-  onUpdateProfile: (payload: { name: string; email: string; phone: string; bio?: string }) => Promise<any>;
+  orders: Order[];
+  onUpdateProfile: (payload: { 
+    name: string; 
+    email: string; 
+    phone: string; 
+    bio?: string;
+    designation?: string;
+    address?: string;
+    nid?: string;
+    bloodGroup?: string;
+    employeeId?: string;
+    photo?: string;
+    birthDate?: string;
+  }) => Promise<any>;
   onRequestAdvance: (payload: { amount: number; month: string; reason: string }) => Promise<any>;
   onApproveRejectAdvance: (id: string, status: 'approved' | 'rejected') => Promise<any>;
 }
 
 export default function MyProfileView({
-  activeUser, employees, salaries, loans, advanceRequests,
+  activeUser, employees, salaries, loans, advanceRequests, orders,
   onUpdateProfile, onRequestAdvance, onApproveRejectAdvance
 }: MyProfileViewProps) {
   const isAdmin = activeUser.role === 'admin';
@@ -27,7 +40,14 @@ export default function MyProfileView({
   const [name, setName] = useState(activeUser.name);
   const [email, setEmail] = useState(activeUser.email);
   const [phone, setPhone] = useState(activeUser.phone || '');
-  const [bio, setBio] = useState((activeUser as any).bio || '');
+  const [bio, setBio] = useState(activeUser.bio || '');
+  const [designation, setDesignation] = useState(activeUser.designation || matchingEmployeeObj?.designation || '');
+  const [address, setAddress] = useState(activeUser.address || '');
+  const [nid, setNid] = useState(activeUser.nid || '');
+  const [bloodGroup, setBloodGroup] = useState(activeUser.bloodGroup || '');
+  const [employeeId, setEmployeeId] = useState(activeUser.employeeId || '');
+  const [photo, setPhoto] = useState(activeUser.photo || '');
+  const [birthDate, setBirthDate] = useState(activeUser.birthDate || '');
   const [saveSuccess, setSaveSuccess] = useState('');
   const [saveLoading, setSaveLoading] = useState(false);
 
@@ -48,7 +68,7 @@ export default function MyProfileView({
     setSaveLoading(true);
 
     try {
-      await onUpdateProfile({ name, email, phone, bio });
+      await onUpdateProfile({ name, email, phone, bio, designation, address, nid, bloodGroup, employeeId, photo, birthDate });
       setSaveSuccess('আপনার প্রোফাইল সফলভাবে আপডেট করা হয়েছে!');
       setTimeout(() => setSaveSuccess(''), 5000);
     } catch (err: any) {
@@ -114,6 +134,35 @@ export default function MyProfileView({
   const myAdvanceRequests = matchingEmployeeObj
     ? advanceRequests.filter(req => req.employeeId === matchingEmployeeObj.id)
     : [];
+
+  // Let's compute Sales progress metrics!
+  const myProcessedOrders = orders.filter(o => 
+    o.createdBy === activeUser.id || 
+    o.createdBy === activeUser.email || 
+    (matchingEmployeeObj && o.createdBy === matchingEmployeeObj.id)
+  );
+  const myTotalCount = myProcessedOrders.length;
+  const myTotalRevenue = myProcessedOrders.reduce((sum, o) => sum + o.totalAmount, 0);
+
+  // Target Levels calculation
+  let targetSalesAmount = 10000;
+  let currentLevelName = 'ব্রোঞ্জ সেলস লেভেল (Bronze)';
+  let nextLevelName = 'সিলভার সেলস লেভেল (Silver)';
+  let levelsBadgeColor = 'bg-stone-100 text-stone-850';
+
+  if (myTotalRevenue >= 50000) {
+    targetSalesAmount = 150000;
+    currentLevelName = 'গোল্ড লিডার (Gold)';
+    nextLevelName = 'প্লাটিনাম এলিট (Platinum)';
+    levelsBadgeColor = 'bg-amber-100 text-amber-800 border-amber-300';
+  } else if (myTotalRevenue >= 10000) {
+    targetSalesAmount = 50000;
+    currentLevelName = 'সিলভার স্টার (Silver)';
+    nextLevelName = 'গোল্ড লিডার (Gold)';
+    levelsBadgeColor = 'bg-indigo-100 text-indigo-800 border-indigo-300';
+  }
+
+  const salesProgressPercent = Math.min((myTotalRevenue / targetSalesAmount) * 100, 100);
 
   return (
     <div className="space-y-6 animate-in fade-in-25 duration-150" id="profile_root_view">
@@ -245,14 +294,77 @@ export default function MyProfileView({
                 </div>
 
                 <div>
-                  <label className="block text-slate-700 text-xs font-semibold mb-1">অ্যাকাউন্ট রোল</label>
+                  <label className="block text-slate-700 text-xs font-semibold mb-1">পদবী (Designation)</label>
                   <input
                     type="text"
-                    disabled
-                    value={activeUser.role === 'admin' ? 'কোম্পানি এডমিনিস্ট্রেটর' : 'অগ্রিম স্টাফ একাউন্ট'}
-                    className="w-full px-3.5 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl text-slate-500 cursor-not-allowed font-bold"
+                    value={designation}
+                    onChange={(e) => setDesignation(e.target.value)}
+                    className="w-full px-3.5 py-2 text-xs border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-xl font-medium"
+                    placeholder="যেমন: সিনিয়র সেলস এক্সিকিউটিভ"
                   />
                 </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-700 text-xs font-semibold mb-1">জাতীয় পরিচয়পত্র নং / NID</label>
+                  <input
+                    type="text"
+                    value={nid}
+                    onChange={(e) => setNid(e.target.value)}
+                    className="w-full px-3.5 py-2 text-xs border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-xl font-mono"
+                    placeholder="NID নম্বর"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 text-xs font-semibold mb-1">রক্তের গ্রুপ (Blood Group)</label>
+                  <select
+                    value={bloodGroup}
+                    onChange={(e) => setBloodGroup(e.target.value)}
+                    className="w-full px-3.5 py-2 text-xs border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-xl"
+                  >
+                    <option value="">নির্বাচন করুন...</option>
+                    {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(bg => (
+                      <option key={bg} value={bg}>{bg}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-slate-700 text-xs font-semibold mb-1">কর্মচারী পরিচয়পত্র নং (Employee ID)</label>
+                  <input
+                    type="text"
+                    value={employeeId}
+                    onChange={(e) => setEmployeeId(e.target.value)}
+                    className="w-full px-3.5 py-2 text-xs border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-xl font-mono"
+                    placeholder="যেমনঃ EMP-2025-042"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-slate-700 text-xs font-semibold mb-1">জন্ম তারিখ (Birth Date) *</label>
+                  <input
+                    type="date"
+                    value={birthDate}
+                    onChange={(e) => setBirthDate(e.target.value)}
+                    className="w-full px-3.5 py-2 text-xs border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-xl font-mono"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">আজকের ডেট (June 21) নির্বাচন করলে ড্যাশবোর্ডে শুভ জন্মদিন উইশ ও SMS সিমুলেশন দেখতে পাবেন।</p>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-slate-700 text-xs font-semibold mb-1">স্থায়ী ও বর্তমান ঠিকানা (Address)</label>
+                <input
+                  type="text"
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  className="w-full px-3.5 py-2 text-xs border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-xl"
+                  placeholder="যেমন: ৩য় তলা, বাড়ি ৪, রোড ২, সেক্টর ৯, উত্তরা, ঢাকা"
+                />
               </div>
 
               <div>
@@ -266,6 +378,35 @@ export default function MyProfileView({
                 />
               </div>
 
+              <div>
+                <label className="block text-slate-700 text-xs font-semibold mb-1">প্রোফাইল ছবি (Profile Photo URL)</label>
+                <input
+                  type="text"
+                  value={photo}
+                  onChange={(e) => setPhoto(e.target.value)}
+                  className="w-full px-3.5 py-2 text-xs border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-xl font-mono text-slate-600 mb-2"
+                  placeholder="ছবির সরাসরি লিংক অথবা নিচের যেকোনো প্রিসেট সিলেক্ট করুন..."
+                />
+                <div className="flex gap-2.5 items-center flex-wrap">
+                  <span className="text-[10px] font-bold text-slate-400">প্রিসেট ছবির তালিকাঃ</span>
+                  {[
+                    { name: 'Professional Male 1', url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80' },
+                    { name: 'Professional Female 1', url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80' },
+                    { name: 'Modern Male 2', url: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&auto=format&fit=crop&q=80' },
+                    { name: 'Modern Female 2', url: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&auto=format&fit=crop&q=80' }
+                  ].map((pImg, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => setPhoto(pImg.url)}
+                      className={`w-9 h-9 rounded-full overflow-hidden border-2 transition cursor-pointer ${photo === pImg.url ? 'border-indigo-600 scale-105 shadow-sm' : 'border-slate-250 opacity-70 hover:opacity-100'}`}
+                    >
+                      <img src={pImg.url} alt={pImg.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    </button>
+                  ))}
+                </div>
+              </div>
+
               <button
                 type="submit"
                 disabled={saveLoading}
@@ -276,43 +417,106 @@ export default function MyProfileView({
             </form>
           </div>
 
-          {/* Quick Guide/Info Box */}
-          <div className="bg-slate-900 text-slate-200 p-5 rounded-2xl border border-slate-800 shadow-sm flex flex-col justify-between">
-            <div>
-              <h3 className="text-sm font-bold text-indigo-300 border-b border-slate-800 pb-3 flex items-center gap-2">
-                <Shield className="w-5 h-5 text-indigo-400" /> রোল-বেসড এক্সেস এক নজরে
-              </h3>
+          {/* Live Profile Card & Interactive Sales progress tracker */}
+          <div className="space-y-6">
+            {/* Elegant Employee Identity Card */}
+            <div className="bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800 text-slate-200 p-6 rounded-3xl border border-slate-800 shadow-xl relative overflow-hidden ring-1 ring-slate-850">
+              <div className="absolute right-0 top-0 translate-x-1/3 -translate-y-1/3 opacity-5 pointer-events-none">
+                <Shield className="w-48 h-48 text-white" />
+              </div>
 
-              <div className="space-y-4 pt-4 text-xs select-none">
-                <div className="flex gap-2.5">
-                  <div className="p-1 bg-indigo-500/10 rounded-lg text-indigo-400 font-bold shrink-0 self-start">✓</div>
-                  <div>
-                    <p className="font-bold text-white">কোম্পানি তথ্য নিয়ন্ত্রকঃ</p>
-                    <p className="text-slate-450 text-[11px] mt-0.5 leading-normal">এডমিনরা যেকোনো ডেটা ডিলিট, স্যালারি পেমেন্ট এবং স্টাফ রেকর্ড ডিরেক্টরি ক্রিয়েট করতে পারেন।</p>
+              <div className="text-center relative z-10 flex flex-col items-center">
+                <div className="relative">
+                  <div className="w-24 h-24 rounded-full overflow-hidden border-4 border-indigo-500/50 shadow-inner bg-slate-800 p-0.5 flex items-center justify-center">
+                    {activeUser.photo ? (
+                      <img 
+                        src={activeUser.photo} 
+                        alt={activeUser.name} 
+                        className="w-full h-full object-cover rounded-full"
+                        referrerPolicy="no-referrer"
+                        onError={(e) => {
+                          // Fallback on broken image
+                          (e.target as any).src = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80';
+                        }}
+                      />
+                    ) : (
+                      <div className="w-full h-full rounded-full bg-indigo-650 flex items-center justify-center font-bold text-3xl text-white">
+                        {activeUser.name.charAt(0)}
+                      </div>
+                    )}
                   </div>
+                  <span className={`absolute bottom-0.5 right-0.5 w-5 h-5 rounded-full border-2 border-slate-900 ${activeUser.status === 'active' ? 'bg-emerald-500' : 'bg-red-500'} flex items-center justify-center`} title="স্ট্যাটাসঃ সচল">
+                    <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping" />
+                  </span>
                 </div>
 
-                <div className="flex gap-2.5">
-                  <div className="p-1 bg-emerald-500/10 rounded-lg text-emerald-400 font-bold shrink-0 self-start">✓</div>
-                  <div>
-                    <p className="font-bold text-white">সেলস এন্ড অপারেশনস অ্যাক্সেসঃ</p>
-                    <p className="text-slate-450 text-[11px] mt-0.5 leading-normal">কোম্পানি স্টাফরা পণ্য স্টক আপ করতে পারেন, নতুন সেলস অর্ডার এন্ড ইনভয়েস করতে পারেন, তবে স্টাফদের বেতন ডিক্লেয়ার বা ঋণ দিতে পারেন না।</p>
-                  </div>
+                <h3 className="text-base font-black text-white mt-3.5 tracking-tight">{activeUser.name}</h3>
+                <p className="text-[11px] text-slate-400 font-medium tracking-wide mt-0.5 uppercase">{activeUser.designation || 'কোম্পানি স্টাফ'}</p>
+
+                {/* Employee ID Badge */}
+                <div className="mt-4 bg-indigo-500/10 border border-indigo-500/20 px-3.5 py-1.5 rounded-xl inline-flex flex-col items-center select-none">
+                  <span className="text-[9px] uppercase tracking-wider font-extrabold text-slate-500">আইডি কার্ড নম্বর (Employee ID)</span>
+                  <span className="font-mono text-xs font-black text-indigo-300 mt-0.5 tracking-widest">{activeUser.employeeId || 'EMP-TEMP-999'}</span>
                 </div>
 
-                <div className="flex gap-2.5">
-                  <div className="p-1 bg-amber-500/10 rounded-lg text-amber-400 font-bold shrink-0 self-start">✓</div>
-                  <div>
-                    <p className="font-bold text-white">অগ্রিম বেতন ও ঋণ সুবিধাঃ</p>
-                    <p className="text-slate-450 text-[11px] mt-0.5 leading-normal">স্টাফরা সরাসরি পোর্টাল ড্যাশবোর্ড থেকে অগ্রিম বেতনের আবেদন লিখে পাঠাতে পারেন এবং তাদের মাসিক ঋণের খতিয়ান পর্যবেক্ষণ করতে পারেন।</p>
+                <div className="w-full mt-5 pt-4 border-t border-slate-800/80 grid grid-cols-2 gap-2 text-left">
+                  <div className="bg-slate-900/40 p-2.5 rounded-xl border border-slate-800/30">
+                    <span className="text-[9px] text-slate-500 block uppercase font-bold">যোগদানের তারিখ</span>
+                    <span className="text-xs text-slate-350 font-mono mt-0.5 block">{activeUser.joinedDate || '০২-০৩-২০২৬'}</span>
+                  </div>
+                  <div className="bg-slate-900/40 p-2.5 rounded-xl border border-slate-800/30">
+                    <span className="text-[9px] text-slate-500 block uppercase font-bold"> রক্তের গ্রুপ</span>
+                    <span className="text-xs text-rose-400 font-bold mt-0.5 block">{activeUser.bloodGroup || 'অনির্ধারিত'}</span>
                   </div>
                 </div>
               </div>
             </div>
 
-            <div className="mt-6 border-t border-slate-800 pt-4 text-[11px] text-slate-400 flex items-center gap-1.5 font-bold">
-              <UserCheck className="w-4 h-4 text-emerald-500" /> 
-              সিস্টেম সেশনঃ সচল (Session Alive)
+            {/* Sales Performance & Target Tracker Card */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-150 shadow-sm space-y-4">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                <h4 className="text-xs font-black text-slate-800 flex items-center gap-2">
+                  <Award className="w-4 h-4 text-amber-500" /> বিক্রয় অগ্রগতি ও রিয়েল-টাইম প্রোগ্রেস
+                </h4>
+                <span className={`px-2 py-0.5 rounded-md text-[9px] font-bold border ${levelsBadgeColor}`}>
+                  {currentLevelName}
+                </span>
+              </div>
+
+              {/* Progress metrics row */}
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <span className="text-[10px] text-slate-450 block font-medium">বিক্রয় পরিমাণ (Count)</span>
+                  <p className="text-lg font-extrabold text-indigo-650 mt-1 font-mono flex items-center gap-1">
+                    <Flame className="w-4 h-4 text-orange-500 animate-pulse" />
+                    {myTotalCount} টি
+                  </p>
+                </div>
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-100">
+                  <span className="text-[10px] text-slate-450 block font-medium">বিক্রয় মূল্য (Revenue)</span>
+                  <p className="text-base font-black text-slate-800 mt-1 font-mono">
+                    ৳{myTotalRevenue.toLocaleString('en-IN')}
+                  </p>
+                </div>
+              </div>
+
+              {/* Goal Progress bar */}
+              <div className="pt-2">
+                <div className="flex justify-between text-[10px] font-bold text-slate-500 mb-1">
+                  <span>অগ্রগতি লক্ষ্যমাত্রা</span>
+                  <span className="text-indigo-600 font-mono">{salesProgressPercent.toFixed(0)}%</span>
+                </div>
+                <div className="w-full bg-slate-100 h-2.5 rounded-full overflow-hidden border border-slate-205/60">
+                  <div 
+                    className="bg-gradient-to-r from-indigo-500 to-indigo-600 h-full rounded-full transition-all duration-500"
+                    style={{ width: `${salesProgressPercent}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-[9px] text-slate-400 mt-1.5 font-mono">
+                  <span>৳{myTotalRevenue.toLocaleString('en-IN')}</span>
+                  <span>পরবর্তী লক্ষ্যঃ ৳{targetSalesAmount.toLocaleString('en-IN')} ({nextLevelName})</span>
+                </div>
+              </div>
             </div>
           </div>
         </div>

@@ -1,4 +1,4 @@
-export type UserRole = 'admin' | 'employee';
+export type UserRole = 'supper_admin' | 'admin' | 'employee';
 
 export interface User {
   id: string;
@@ -8,6 +8,15 @@ export interface User {
   status: 'active' | 'inactive';
   joinedDate?: string;
   phone?: string;
+  designation?: string;
+  address?: string;
+  nid?: string;
+  bloodGroup?: string;
+  bio?: string;
+  employeeId?: string;
+  photo?: string;
+  birthDate?: string;
+  allowedMenus?: string[];
 }
 
 export interface Category {
@@ -36,6 +45,7 @@ export interface Product {
   lowStockThreshold: number;
   description: string;
   createdAt: string;
+  supplierId?: string;
 }
 
 export interface Customer {
@@ -43,6 +53,16 @@ export interface Customer {
   name: string;
   email: string;
   phone: string;
+  address: string;
+  createdAt: string;
+}
+
+export interface Supplier {
+  id: string;
+  name: string;
+  companyName: string;
+  phone: string;
+  email: string;
   address: string;
   createdAt: string;
 }

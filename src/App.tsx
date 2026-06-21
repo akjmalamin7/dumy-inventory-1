@@ -1,10 +1,10 @@
 import { useState, useEffect } from 'react';
 import { 
-  ShoppingBag, LayoutDashboard, Package, Layers, ShoppingCart, Users, BadgeAlert, LogOut, ShieldAlert, Clock, UserCheck, Menu, X, CheckCircle, User as UserIcon
+  ShoppingBag, LayoutDashboard, Package, Layers, ShoppingCart, Users, BadgeAlert, LogOut, ShieldAlert, Clock, UserCheck, Menu, X, CheckCircle, User as UserIcon, BarChart3
 } from 'lucide-react';
 
 import { 
-  User, Category, Brand, Product, Customer, Order, Employee, SalaryPayment, Loan, LowStockAlertLog, AdvanceSalaryRequest 
+  User, Category, Brand, Product, Customer, Order, Employee, SalaryPayment, Loan, LowStockAlertLog, AdvanceSalaryRequest, Supplier 
 } from './types';
 
 import LoginScreen from './components/LoginScreen';
@@ -15,6 +15,7 @@ import OrdersView from './components/OrdersView';
 import CRMAndStaffView from './components/CRMAndStaffView';
 import LowStockAlertLogsView from './components/LowStockAlertLogsView';
 import MyProfileView from './components/MyProfileView';
+import ReportsView from './components/ReportsView';
 
 export default function App() {
   const [activeUser, setActiveUser] = useState<User | null>(() => {
@@ -37,6 +38,8 @@ export default function App() {
   const [loans, setLoans] = useState<Loan[]>([]);
   const [alerts, setAlerts] = useState<LowStockAlertLog[]>([]);
   const [advanceRequests, setAdvanceRequests] = useState<AdvanceSalaryRequest[]>([]);
+  const [usersList, setUsersList] = useState<User[]>([]);
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
 
   // Alert system notification toasts
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -66,7 +69,9 @@ export default function App() {
         salariesRes,
         loansRes,
         alertsRes,
-        advanceRes
+        advanceRes,
+        usersRes,
+        suppliersRes
       ] = await Promise.all([
         fetch('/api/dashboard').then(res => res.json()),
         fetch('/api/products').then(res => res.json()),
@@ -78,7 +83,9 @@ export default function App() {
         fetch('/api/salaries').then(res => res.json()),
         fetch('/api/loans').then(res => res.json()),
         fetch('/api/alerts').then(res => res.json()),
-        fetch('/api/advance-salary').then(res => res.json())
+        fetch('/api/advance-salary').then(res => res.json()),
+        fetch('/api/users').then(res => res.json()),
+        fetch('/api/suppliers').then(res => res.json())
       ]);
 
       setDashboardData(dashboardRes);
@@ -92,6 +99,8 @@ export default function App() {
       setLoans(loansRes);
       setAlerts(alertsRes);
       setAdvanceRequests(advanceRes);
+      setUsersList(usersRes);
+      setSuppliers(suppliersRes);
     } catch (err) {
       console.error('Error fetching data from server:', err);
     }
@@ -100,6 +109,34 @@ export default function App() {
   useEffect(() => {
     fetchAllData();
   }, [activeUser]);
+
+  useEffect(() => {
+    if (activeUser && usersList.length > 0) {
+      const match = usersList.find(u => u.id === activeUser.id || u.email.toLowerCase() === activeUser.email.toLowerCase());
+      if (match) {
+        if (match.status === 'inactive') {
+          handleLogout();
+          alert('🔒 আপনার একাউন্টটি সাময়িকভাবে নিষ্ক্রিয় (Blocked) করা হয়েছে। দয়া করে এডমিনের সাথে যোগাযোগ করুন।');
+          return;
+        }
+        
+        if (JSON.stringify(match.allowedMenus) !== JSON.stringify(activeUser.allowedMenus) || match.role !== activeUser.role) {
+          setActiveUser(match);
+          localStorage.setItem('inv_user_session', JSON.stringify(match));
+        }
+
+        // Restrict activeView to allowed ones
+        const userAllowedMenus = match.allowedMenus || (
+          match.role === 'employee' 
+            ? ['dashboard', 'orders', 'profile'] 
+            : ['dashboard', 'products', 'categories', 'orders', 'crm', 'reports', 'alerts', 'profile']
+        );
+        if (!userAllowedMenus.includes(activeView)) {
+          setActiveView(userAllowedMenus[0] || 'profile');
+        }
+      }
+    }
+  }, [usersList, activeUser, activeView]);
 
   // Auth logins handler
   const handleLogin = async (email: string, pass: string) => {
@@ -172,6 +209,21 @@ export default function App() {
       throw new Error(err.error);
     }
     await fetchAllData();
+  };
+
+  const handleAddSupplier = async (payload: { name: string; companyName: string; phone?: string; email?: string; address?: string }) => {
+    const res = await fetch('/api/suppliers', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error);
+    }
+    const newSupp = await res.json();
+    await fetchAllData();
+    return newSupp;
   };
 
   const handleAddCategory = async (payload: { name: string; description: string }) => {
@@ -299,7 +351,19 @@ export default function App() {
     await fetchAllData();
   };
 
-  const handleUpdateProfile = async (payload: { name: string; email: string; phone: string; bio?: string }) => {
+  const handleUpdateProfile = async (payload: { 
+    name: string; 
+    email: string; 
+    phone: string; 
+    bio?: string;
+    designation?: string;
+    address?: string;
+    nid?: string;
+    bloodGroup?: string;
+    employeeId?: string;
+    photo?: string;
+    birthDate?: string;
+  }) => {
     if (!activeUser) return;
     const res = await fetch(`/api/users/${activeUser.id}`, {
       method: 'PUT',
@@ -315,6 +379,49 @@ export default function App() {
     localStorage.setItem('inv_user_session', JSON.stringify(updatedUser));
     await fetchAllData();
     return updatedUser;
+  };
+
+  const handleAddUser = async (payload: any) => {
+    if (!activeUser) return;
+    const res = await fetch('/api/users', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...payload,
+        executorId: activeUser.id
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error);
+    }
+    const newUser = await res.json();
+    await fetchAllData();
+    return newUser;
+  };
+
+  const handleUpdateUserAdmin = async (id: string, payload: any) => {
+    if (!activeUser) return;
+    const res = await fetch(`/api/users/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        ...payload,
+        executorId: activeUser.id
+      })
+    });
+    if (!res.ok) {
+      const err = await res.json();
+      throw new Error(err.error);
+    }
+    const updated = await res.json();
+    await fetchAllData();
+
+    if (activeUser.id === id) {
+      setActiveUser(updated);
+      localStorage.setItem('inv_user_session', JSON.stringify(updated));
+    }
+    return updated;
   };
 
   const handleRequestAdvance = async (payload: { amount: number; month: string; reason: string }) => {
@@ -364,15 +471,24 @@ export default function App() {
   }
 
   // Sidebar Layout Navigation Link Configuration
-  const navLinks = [
+  const rawNavLinks = [
     { id: 'dashboard', label: 'ড্যাশবোর্ড', icon: LayoutDashboard },
     { id: 'products', label: 'পণ্য স্টক CRUD', icon: Package },
-    { id: 'categories', label: 'ক্যাটাগরি ও ব্র্যান্ড', icon: Layers },
+    { id: 'categories', label: 'ক্যাটাগরি, ব্র্যান্ড ও সরবরাহকারী', icon: Layers },
     { id: 'orders', label: 'বিক্রয় ও ইনভয়েস', icon: ShoppingCart },
     { id: 'crm', label: 'কাস্টমার ও স্টাফ (HR)', icon: Users },
+    { id: 'reports', label: 'সেলস অডিট ও রিপোর্টস', icon: BarChart3 },
     { id: 'alerts', label: 'লো-স্টক মেইল ট্র্যাকার', icon: BadgeAlert, badge: alerts.length > 0 ? alerts.length : null },
-    { id: 'profile', label: 'আমার প্রোফাইল ও এডভান্স', icon: UserIcon, badge: (activeUser.role === 'admin' && advanceRequests.filter(r => r.status === 'pending').length > 0) ? advanceRequests.filter(r => r.status === 'pending').length : null }
+    { id: 'profile', label: 'আমার প্রোফাইল ও এডভান্স', icon: UserIcon, badge: ((activeUser.role === 'admin' || activeUser.role === 'supper_admin') && advanceRequests.filter(r => r.status === 'pending').length > 0) ? advanceRequests.filter(r => r.status === 'pending').length : null }
   ];
+
+  const userAllowedMenus = activeUser.allowedMenus || (
+    activeUser.role === 'employee' 
+      ? ['dashboard', 'orders', 'profile'] 
+      : ['dashboard', 'products', 'categories', 'orders', 'crm', 'reports', 'alerts', 'profile']
+  );
+
+  const navLinks = rawNavLinks.filter(link => userAllowedMenus.includes(link.id));
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row text-slate-700" id="app_view">
@@ -523,6 +639,7 @@ export default function App() {
                   products={products} 
                   categories={categories} 
                   brands={brands} 
+                  suppliers={suppliers}
                   activeUser={activeUser}
                   onAddProduct={handleAddProduct}
                   onUpdateProduct={handleUpdateProduct}
@@ -533,9 +650,11 @@ export default function App() {
                 <CategoriesAndBrandsView 
                   categories={categories} 
                   brands={brands} 
+                  suppliers={suppliers}
                   activeUser={activeUser}
                   onAddCategory={handleAddCategory}
                   onAddBrand={handleAddBrand}
+                  onAddSupplier={handleAddSupplier}
                 />
               )}
               {activeView === 'orders' && (
@@ -554,10 +673,23 @@ export default function App() {
                   salaries={salaries} 
                   loans={loans} 
                   activeUser={activeUser}
+                  users={usersList}
                   onAddCustomer={handleAddCustomer}
                   onAddEmployee={handleAddEmployee}
                   onRecordSalary={handleRecordSalary}
                   onRecordLoan={handleRecordLoan}
+                  onAddUser={handleAddUser}
+                  onUpdateUserAdmin={handleUpdateUserAdmin}
+                />
+              )}
+              {activeView === 'reports' && (
+                <ReportsView 
+                  orders={orders}
+                  products={products}
+                  customers={customers}
+                  users={usersList}
+                  employees={employees}
+                  activeUser={activeUser}
                 />
               )}
               {activeView === 'alerts' && (
@@ -575,6 +707,7 @@ export default function App() {
                   salaries={salaries}
                   loans={loans}
                   advanceRequests={advanceRequests}
+                  orders={orders}
                   onUpdateProfile={handleUpdateProfile}
                   onRequestAdvance={handleRequestAdvance}
                   onApproveRejectAdvance={handleApproveRejectAdvance}

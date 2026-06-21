@@ -1,26 +1,34 @@
 import React, { useState } from 'react';
-import { Plus, FolderPlus, Layers, Trash2, Edit2, Check, X, Tag } from 'lucide-react';
-import { Category, Brand, User } from '../types.js';
+import { Plus, FolderPlus, Layers, Trash2, Edit2, Check, X, Tag, Truck } from 'lucide-react';
+import { Category, Brand, User, Supplier } from '../types.js';
 
 interface CategoriesAndBrandsViewProps {
   categories: Category[];
   brands: Brand[];
+  suppliers: Supplier[];
   activeUser: User;
   onAddCategory: (cat: { name: string; description: string }) => Promise<any>;
   onAddBrand: (brand: { name: string; description: string }) => Promise<any>;
+  onAddSupplier: (supplier: { name: string; companyName: string; phone?: string; email?: string; address?: string }) => Promise<any>;
 }
 
 export default function CategoriesAndBrandsView({
-  categories, brands, activeUser, onAddCategory, onAddBrand
+  categories, brands, suppliers, activeUser, onAddCategory, onAddBrand, onAddSupplier
 }: CategoriesAndBrandsViewProps) {
   const isAdmin = activeUser.role === 'admin';
   const [catName, setCatName] = useState('');
   const [catDesc, setCatDesc] = useState('');
   const [brandName, setBrandName] = useState('');
   const [brandDesc, setBrandDesc] = useState('');
+  const [suppName, setSuppName] = useState('');
+  const [suppCompany, setSuppCompany] = useState('');
+  const [suppPhone, setSuppPhone] = useState('');
+  const [suppEmail, setSuppEmail] = useState('');
+  const [suppAddress, setSuppAddress] = useState('');
 
   const [catError, setCatError] = useState('');
   const [brandError, setBrandError] = useState('');
+  const [suppError, setSuppError] = useState('');
 
   const handleCreateCategory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,8 +62,33 @@ export default function CategoriesAndBrandsView({
     }
   };
 
+  const handleCreateSupplier = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSuppError('');
+    if (!suppName || !suppCompany) {
+      setSuppError('সরবরাহকারীর নাম এবং কোম্পানির নাম আবশ্যক।');
+      return;
+    }
+    try {
+      await onAddSupplier({
+        name: suppName,
+        companyName: suppCompany,
+        phone: suppPhone,
+        email: suppEmail,
+        address: suppAddress
+      });
+      setSuppName('');
+      setSuppCompany('');
+      setSuppPhone('');
+      setSuppEmail('');
+      setSuppAddress('');
+    } catch (err: any) {
+      setSuppError(err.message || 'সরবরাহকারী যোগ করতে ভুল হয়েছে।');
+    }
+  };
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6" id="categories_brands_view">
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" id="categories_brands_view">
       {/* Category Card panel */}
       <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-6">
         <div>
@@ -164,6 +197,93 @@ export default function CategoriesAndBrandsView({
           ))}
           {brands.length === 0 && (
             <p className="text-slate-400 text-xs text-center py-6">কোনো ব্র্যান্ড যুক্ত করা হয়নি।</p>
+          )}
+        </div>
+      </div>
+
+      {/* Suppliers Panel Column */}
+      <div className="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm space-y-6">
+        <div>
+          <h2 className="text-lg font-bold text-slate-800 flex items-center gap-2">
+            <Truck className="w-5 h-5 text-indigo-600" /> সরবরাহকারী খাতা (Suppliers)
+          </h2>
+          <p className="text-xs text-slate-500">পণ্য কেনাকাটার সোর্স বা সরবরাহকারী তালিকা</p>
+        </div>
+
+        {/* Supplier Form */}
+        <form onSubmit={handleCreateSupplier} className="p-4 bg-slate-50 rounded-2xl border border-slate-100 space-y-3">
+          <p className="text-xs font-bold text-slate-700">নতুন সরবরাহকারী যোগ করুন</p>
+          {suppError && (
+            <div className="text-[11px] bg-red-100 text-red-700 p-2 rounded-lg">{suppError}</div>
+          )}
+          <div className="space-y-2">
+            <input
+              type="text"
+              placeholder="সরবরাহকারীর নাম (যেমন: আবুল কালাম)..."
+              value={suppName}
+              onChange={(e) => setSuppName(e.target.value)}
+              className="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 focus:ring-2 focus:ring-indigo-500 rounded-xl focus:outline-none"
+              required
+            />
+            <input
+              type="text"
+              placeholder="কোম্পানি/ডিস্ট্রিবিউটর (যেমন: কালাম এন্টারপ্রাইজ)..."
+              value={suppCompany}
+              onChange={(e) => setSuppCompany(e.target.value)}
+              className="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 focus:ring-2 focus:ring-indigo-500 rounded-xl focus:outline-none"
+              required
+            />
+            <input
+              type="text"
+              placeholder="মোবাইল নম্বর (যেমন: 01712345678)..."
+              value={suppPhone}
+              onChange={(e) => setSuppPhone(e.target.value)}
+              className="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 focus:ring-2 focus:ring-indigo-500 rounded-xl focus:outline-none"
+            />
+            <input
+              type="email"
+              placeholder="ইমেইল অ্যাড্রেস..."
+              value={suppEmail}
+              onChange={(e) => setSuppEmail(e.target.value)}
+              className="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 focus:ring-2 focus:ring-indigo-500 rounded-xl focus:outline-none"
+            />
+            <input
+              type="text"
+              placeholder="ঠিকানা (যেমন: চকবাজার, ঢাকা)..."
+              value={suppAddress}
+              onChange={(e) => setSuppAddress(e.target.value)}
+              className="w-full px-3 py-1.5 text-xs bg-white border border-slate-200 focus:ring-2 focus:ring-indigo-500 rounded-xl focus:outline-none"
+            />
+            <button
+              type="submit"
+              className="w-full py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-bold rounded-xl transition flex justify-center items-center gap-1 cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" /> সরবরাহকারী সেভ করুন
+            </button>
+          </div>
+        </form>
+
+        {/* Suppliers List */}
+        <div className="space-y-2 max-h-64 overflow-y-auto">
+          {suppliers && suppliers.map((s) => (
+            <div key={s.id} className="p-3 bg-white border border-slate-100 hover:border-slate-200 rounded-xl shadow-xs transition flex flex-col gap-1.5 text-slate-705">
+              <div className="flex justify-between items-start gap-2">
+                <div>
+                  <h4 className="text-xs font-bold text-slate-800">{s.name}</h4>
+                  <p className="text-[10px] text-indigo-600 font-extrabold mt-0.5">{s.companyName}</p>
+                </div>
+                <span className="text-[9px] text-slate-400 font-mono bg-slate-50 px-1.5 py-0.5 rounded font-bold shrink-0">{s.id}</span>
+              </div>
+              
+              <div className="text-[10px] text-slate-550 space-y-0.5 pt-1 border-t border-dashed border-slate-100">
+                {s.phone && <p>📱 {s.phone}</p>}
+                {s.email && <p>✉️ {s.email}</p>}
+                {s.address && <p>📍 {s.address}</p>}
+              </div>
+            </div>
+          ))}
+          {(!suppliers || suppliers.length === 0) && (
+            <p className="text-slate-400 text-xs text-center py-6">কোনো সরবরাহকারী যুক্ত করা হয়নি।</p>
           )}
         </div>
       </div>

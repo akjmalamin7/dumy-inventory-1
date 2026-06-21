@@ -144,6 +144,7 @@ async function startServer() {
       quantity: Number(data.quantity),
       lowStockThreshold: Number(data.lowStockThreshold || 5),
       description: data.description || '',
+      supplierId: data.supplierId || '',
       createdAt: new Date().toISOString()
     };
 
@@ -195,6 +196,32 @@ async function startServer() {
 
     dbStore.saveProducts(filtered);
     res.json({ success: true, message: 'পণ্যটি সফলভাবে মুছে ফেলা হয়েছে।' });
+  });
+
+  // --- SUPPLIERS ENDPOINTS ---
+  app.get('/api/suppliers', (req, res) => {
+    res.json(dbStore.getSuppliers());
+  });
+
+  app.post('/api/suppliers', (req, res) => {
+    const { name, companyName, phone, email, address } = req.body;
+    if (!name || !companyName) {
+      return res.status(400).json({ error: 'সরবরাহকারীর নাম এবং কোম্পানির নাম আবশ্যক।' });
+    }
+
+    const suppliers = dbStore.getSuppliers();
+    const newSupplier = {
+      id: 's_' + Date.now(),
+      name,
+      companyName,
+      phone: phone || '',
+      email: email || '',
+      address: address || '',
+      createdAt: new Date().toISOString()
+    };
+    suppliers.push(newSupplier);
+    dbStore.saveSuppliers(suppliers);
+    res.status(201).json(newSupplier);
   });
 
   // --- CATEGORIES ENDPOINTS ---
@@ -528,9 +555,73 @@ async function startServer() {
     res.json(dbStore.getUsers());
   });
 
+  app.post('/api/users', (req, res) => {
+    const { name, email, phone, designation, role, allowedMenus, executorId } = req.body;
+    if (!name || !email || !role) {
+      return res.status(400).json({ error: 'নাম, ইমেইল এবং রোল নির্বাচন করা আবশ্যক।' });
+    }
+
+    const users = dbStore.getUsers();
+    if (users.some(u => u.email.toLowerCase() === email.toLowerCase())) {
+      return res.status(400).json({ error: 'এই ইমেইল দিয়ে ইতঃপূর্বে ব্যবহারকারী রেজিস্টার করা হয়েছে।' });
+    }
+
+    if (executorId) {
+      const executor = users.find(u => u.id === executorId);
+      if (!executor) {
+        return res.status(403).json({ error: 'কারেন্ট সেশন ভেরিফিকেশন ব্যর্থ হয়েছে।' });
+      }
+      if (executor.role === 'employee') {
+        return res.status(403).json({ error: '🔒 সেশন রুলঃ কর্মচারীরা কোনো ইউজার যোগ করতে পারবেন না।' });
+      }
+      if (executor.role === 'admin' && role !== 'employee') {
+        return res.status(403).json({ error: '🔒 এডমিন অধিকারঃ আপনার শুধুমাত্র কর্মচারী (employee) শ্রেণির ইউজার যোগ করার পারমিশন আছে।' });
+      }
+    }
+
+    const newUser: User = {
+      id: 'u_' + Date.now(),
+      name,
+      email,
+      phone: phone || '',
+      designation: designation || (role === 'employee' ? 'কোম্পানি স্টাফ' : role === 'admin' ? 'কোম্পানি এডমিন' : 'সুপার এডমিন'),
+      role,
+      status: 'active',
+      allowedMenus: allowedMenus || (role === 'employee' ? ['dashboard', 'orders', 'profile'] : ['dashboard', 'products', 'categories', 'orders', 'crm', 'reports', 'alerts', 'profile']),
+      joinedDate: new Date().toISOString().split('T')[0],
+      employeeId: 'EMP-' + Math.floor(1000 + Math.random() * 9000),
+      bio: ''
+    };
+
+    users.push(newUser);
+    dbStore.saveUsers(users);
+
+    // Also automatically create an HRM Employee entry corresponding to it so directories sync beautifully!
+    const employees = dbStore.getEmployees();
+    if (!employees.some(e => e.email.toLowerCase() === email.toLowerCase())) {
+      const newEmp: Employee = {
+        id: 'emp_' + Date.now(),
+        name,
+        email,
+        phone: phone || '+8801700000000',
+        designation: newUser.designation || 'কোম্পানি স্টাফ',
+        joinedDate: newUser.joinedDate || new Date().toISOString().split('T')[0],
+        salaryAmount: role === 'employee' ? 25000 : role === 'admin' ? 45000 : 75000,
+        status: 'active'
+      };
+      employees.push(newEmp);
+      dbStore.saveEmployees(employees);
+    }
+
+    res.status(201).json(newUser);
+  });
+
   app.put('/api/users/:id', (req, res) => {
     const { id } = req.params;
-    const { name, email, phone, bio } = req.body;
+    const { 
+      name, email, phone, bio, designation, address, nid, bloodGroup, employeeId, photo, birthDate,
+      role, status, allowedMenus, executorId 
+    } = req.body;
     
     const users = dbStore.getUsers();
     const userIndex = users.findIndex(u => u.id === id);
@@ -539,12 +630,52 @@ async function startServer() {
     }
 
     const oldUser = users[userIndex];
+
+    // Auth & authorization validation if executorId is provided
+    if (executorId) {
+      const executor = users.find(u => u.id === executorId);
+      if (!executor) {
+        return res.status(403).json({ error: 'অ্যাক্সেস ডিনাইডঃ সঠিক কারেন্ট ইউজার পাওয়া যায়নি।' });
+      }
+      
+      // If changing role/status/allowedMenus (administrative tasks)
+      if (role !== undefined || status !== undefined || allowedMenus !== undefined) {
+        if (executor.role === 'employee') {
+          return res.status(403).json({ error: '🔒 কর্মচারীদের কোনো ব্যবহারকারীর ইনফরমেশন বা পারমিশন মডিফাই করার অনুমতি নেই।' });
+        }
+        
+        // If administrator (admin) tries to modify admin/supper_admin
+        if (executor.role === 'admin') {
+          if (oldUser.role === 'admin' || oldUser.role === 'supper_admin') {
+             // Admin cannot modify other admins or super admins
+             if (id !== executorId) { // except editing their own basic bio/profile
+               return res.status(403).json({ error: '🔒 এডমিনরা অন্য এডমিন অথবা সুপার এডমিনের পারমিশন বা স্ট্যাটাস ব্লক করতে পারবেন না।' });
+             }
+          }
+          // Admin cannot escalate someone to admin or supper_admin
+          if (role && role !== 'employee') {
+            return res.status(403).json({ error: '🔒 এডমিন শুধুমাত্র কর্মচারীদের পারমিশন পরিচালনা বা এড করতে পারেন।' });
+          }
+        }
+      }
+    }
+
     const updatedUser = {
       ...oldUser,
       name: name !== undefined ? name : oldUser.name,
       email: email !== undefined ? email : oldUser.email,
       phone: phone !== undefined ? phone : oldUser.phone,
-      bio: bio !== undefined ? bio : (oldUser as any).bio
+      bio: bio !== undefined ? bio : oldUser.bio,
+      designation: designation !== undefined ? designation : oldUser.designation,
+      address: address !== undefined ? address : oldUser.address,
+      nid: nid !== undefined ? nid : oldUser.nid,
+      bloodGroup: bloodGroup !== undefined ? bloodGroup : oldUser.bloodGroup,
+      employeeId: employeeId !== undefined ? employeeId : oldUser.employeeId,
+      photo: photo !== undefined ? photo : oldUser.photo,
+      birthDate: birthDate !== undefined ? birthDate : oldUser.birthDate,
+      role: role !== undefined ? role : oldUser.role,
+      status: status !== undefined ? status : oldUser.status,
+      allowedMenus: allowedMenus !== undefined ? allowedMenus : oldUser.allowedMenus
     };
     
     users[userIndex] = updatedUser as any;
@@ -558,7 +689,9 @@ async function startServer() {
         ...employees[empIndex],
         name: name !== undefined ? name : employees[empIndex].name,
         email: email !== undefined ? email : employees[empIndex].email,
-        phone: phone !== undefined ? phone : employees[empIndex].phone
+        phone: phone !== undefined ? phone : employees[empIndex].phone,
+        designation: designation !== undefined ? designation : employees[empIndex].designation,
+        status: status !== undefined ? (status === 'active' ? 'active' : 'inactive') : employees[empIndex].status
       };
       dbStore.saveEmployees(employees);
     }

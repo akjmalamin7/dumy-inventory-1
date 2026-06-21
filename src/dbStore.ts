@@ -2,7 +2,7 @@ import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { 
-  User, Category, Brand, Product, Customer, Order, Employee, SalaryPayment, Loan, LowStockAlertLog, AdvanceSalaryRequest 
+  User, Category, Brand, Product, Customer, Order, Employee, SalaryPayment, Loan, LowStockAlertLog, AdvanceSalaryRequest, Supplier 
 } from './types.js';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -41,8 +41,60 @@ function writeData<T>(collectionName: string, data: T[]): void {
 
 // Initial/Seed Data
 const DEFAULT_USERS: User[] = [
-  { id: 'u1', name: 'Admin User', email: 'admin@inventory.com', role: 'admin', status: 'active', phone: '+8801700000001' },
-  { id: 'u2', name: 'Employee Staff', email: 'employee@inventory.com', role: 'employee', status: 'active', phone: '+8801700000002' }
+  { 
+    id: 'u0', 
+    name: 'Super Admin', 
+    email: 'superadmin@inventory.com', 
+    role: 'supper_admin', 
+    status: 'active', 
+    phone: '+8801700000000',
+    designation: 'চিফ এক্সিকিউটিভ (Super Admin)',
+    address: 'গুলশান, ঢাকা',
+    nid: '1234567890',
+    bloodGroup: 'A+',
+    bio: 'আমি এই সিস্টেমের সুপার অ্যাডমিন কর্মকর্তা। আমি সব কার্যক্রম ও অনুমতি নিয়ন্ত্রণ করতে পারি।',
+    joinedDate: '2023-01-01',
+    employeeId: 'EMP-SA-001',
+    photo: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&auto=format&fit=crop&q=80',
+    birthDate: '1990-01-01',
+    allowedMenus: ['dashboard', 'products', 'categories', 'orders', 'crm', 'reports', 'alerts', 'profile']
+  },
+  { 
+    id: 'u1', 
+    name: 'Admin User', 
+    email: 'admin@inventory.com', 
+    role: 'admin', 
+    status: 'active', 
+    phone: '+8801700000001',
+    designation: 'কোম্পানি প্রধান ও এডমিনিস্ট্রেটর',
+    address: 'বাড়ি ৮, রোড ৫, গুলশান-২, ঢাকা',
+    nid: '9812476531',
+    bloodGroup: 'B+',
+    bio: 'আমি এই কোম্পানির প্রধান ইনভেন্টরি ও সেলস এডমিন হিসেবে নিয়োজিত আছি। সিস্টেমের সকল অপারেশন ও ব্যাকআপ মনিটর করছি।',
+    joinedDate: '2024-01-01',
+    employeeId: 'EMP-2024-001',
+    photo: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&auto=format&fit=crop&q=80',
+    birthDate: '1992-06-22',
+    allowedMenus: ['dashboard', 'products', 'categories', 'orders', 'crm', 'reports', 'alerts', 'profile']
+  },
+  { 
+    id: 'u2', 
+    name: 'Employee Staff', 
+    email: 'employee@inventory.com', 
+    role: 'employee', 
+    status: 'active', 
+    phone: '+8801700000002',
+    designation: 'জিনিয়র সেলস এক্সিকিউটিভ',
+    address: 'সেক্টর ৪, উত্তরা, ঢাকা',
+    nid: '4876251439',
+    bloodGroup: 'O+',
+    bio: 'আমি ইনভেন্টরি পণ্য স্টক হ্যান্ডেল এবং খদ্দেরদের কাছে খুচরা বিক্রয় ও অর্ডার ক্যাশ রশিদ জেনারেট করি।',
+    joinedDate: '2025-02-15',
+    employeeId: 'EMP-2025-042',
+    photo: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&auto=format&fit=crop&q=80',
+    birthDate: '1998-06-21', // Today (June 21) is employee's birthday!
+    allowedMenus: ['dashboard', 'orders', 'profile'] // Default restricted menu permissions for employee
+  }
 ];
 
 const DEFAULT_CATEGORIES: Category[] = [
@@ -58,12 +110,17 @@ const DEFAULT_BRANDS: Brand[] = [
   { id: 'b4', name: 'Logitech', description: 'Premium peripheral manufacturer', createdAt: '2026-05-17T14:00:00Z' }
 ];
 
+const DEFAULT_SUPPLIERS: Supplier[] = [
+  { id: 's1', name: 'মোঃ করিম রহমান', companyName: 'রহমান টেক ডিস্ট্রিবিউটরস', phone: '+8801722222222', email: 'rahman.tech@gmail.com', address: 'মতিঝিল, ঢাকা', createdAt: '2026-05-10T10:00:00Z' },
+  { id: 's2', name: 'আসিফ আল হোসাইন', companyName: 'গ্যাজেট ও ওয়ার্ল্ড বিডি', phone: '+8801833333333', email: 'asif.gadgets@bd.co', address: 'IDB ভবন, ঢাকা', createdAt: '2026-05-11T12:00:00Z' }
+];
+
 const DEFAULT_PRODUCTS: Product[] = [
-  { id: 'p1', name: 'iPhone 15 Pro Max', sku: 'IPH15PM-256', categoryId: 'c1', brandId: 'b1', price: 154000, cost: 132000, quantity: 4, lowStockThreshold: 10, description: 'Apple iPhone 15 Pro Max 256GB Natural Titanium.', createdAt: '2026-05-20T10:00:00Z' },
-  { id: 'p2', name: 'Samsung Galaxy S24 Ultra', sku: 'SAMS24U-512', categoryId: 'c1', brandId: 'b2', price: 145000, cost: 125000, quantity: 12, lowStockThreshold: 8, description: 'Samsung Galaxy S24 Ultra 512GB Titanium Gray with S-Pen.', createdAt: '2026-05-21T11:00:00Z' },
-  { id: 'p3', name: 'Sony WH-1000XM5', sku: 'SONY-XM5-W', categoryId: 'c1', brandId: 'b3', price: 42000, cost: 35000, quantity: 2, lowStockThreshold: 5, description: 'Industry leading noise canceling headphones, Silver.', createdAt: '2026-05-22T09:00:00Z' },
-  { id: 'p4', name: 'Logitech MX Master 3S', sku: 'LOGI-MX3S', categoryId: 'c3', brandId: 'b4', price: 12500, cost: 9800, quantity: 25, lowStockThreshold: 6, description: 'Performance wireless mouse with silent clicks.', createdAt: '2026-05-23T14:45:00Z' },
-  { id: 'p5', name: 'Smart Microwave Oven', sku: 'MW-SMART-20', categoryId: 'c2', brandId: 'b2', price: 28500, cost: 21000, quantity: 15, lowStockThreshold: 4, description: 'Sleek smart microwave oven with WiFi connectivity.', createdAt: '2026-05-24T12:00:00Z' }
+  { id: 'p1', name: 'iPhone 15 Pro Max', sku: 'IPH15PM-256', categoryId: 'c1', brandId: 'b1', price: 154000, cost: 132000, quantity: 4, lowStockThreshold: 10, description: 'Apple iPhone 15 Pro Max 256GB Natural Titanium.', createdAt: '2026-05-20T10:00:00Z', supplierId: 's1' },
+  { id: 'p2', name: 'Samsung Galaxy S24 Ultra', sku: 'SAMS24U-512', categoryId: 'c1', brandId: 'b2', price: 145000, cost: 125000, quantity: 12, lowStockThreshold: 8, description: 'Samsung Galaxy S24 Ultra 512GB Titanium Gray with S-Pen.', createdAt: '2026-05-21T11:00:00Z', supplierId: 's1' },
+  { id: 'p3', name: 'Sony WH-1000XM5', sku: 'SONY-XM5-W', categoryId: 'c1', brandId: 'b3', price: 42000, cost: 35000, quantity: 2, lowStockThreshold: 5, description: 'Industry leading noise canceling headphones, Silver.', createdAt: '2026-05-22T09:00:00Z', supplierId: 's2' },
+  { id: 'p4', name: 'Logitech MX Master 3S', sku: 'LOGI-MX3S', categoryId: 'c3', brandId: 'b4', price: 12500, cost: 9800, quantity: 25, lowStockThreshold: 6, description: 'Performance wireless mouse with silent clicks.', createdAt: '2026-05-23T14:45:00Z', supplierId: 's2' },
+  { id: 'p5', name: 'Smart Microwave Oven', sku: 'MW-SMART-20', categoryId: 'c2', brandId: 'b2', price: 28500, cost: 21000, quantity: 15, lowStockThreshold: 4, description: 'Sleek smart microwave oven with WiFi connectivity.', createdAt: '2026-05-24T12:00:00Z', supplierId: 's1' }
 ];
 
 const DEFAULT_CUSTOMERS: Customer[] = [
@@ -161,7 +218,15 @@ const DEFAULT_ADVANCE_SALARIES: AdvanceSalaryRequest[] = [
 
 // DB Controllers
 export const dbStore = {
-  getUsers: () => readData<User>('users', DEFAULT_USERS),
+  getUsers: () => {
+    const users = readData<User>('users', DEFAULT_USERS);
+    if (!users.some(u => u.role === 'supper_admin' || u.email.toLowerCase() === 'superadmin@inventory.com')) {
+      const sa = DEFAULT_USERS[0];
+      users.unshift(sa);
+      writeData<User>('users', users);
+    }
+    return users;
+  },
   saveUsers: (data: User[]) => writeData<User>('users', data),
 
   getCategories: () => readData<Category>('categories', DEFAULT_CATEGORIES),
@@ -192,7 +257,10 @@ export const dbStore = {
   saveAlerts: (data: LowStockAlertLog[]) => writeData<LowStockAlertLog>('alerts', data),
 
   getAdvanceSalaries: () => readData<AdvanceSalaryRequest>('advance_salaries', DEFAULT_ADVANCE_SALARIES),
-  saveAdvanceSalaries: (data: AdvanceSalaryRequest[]) => writeData<AdvanceSalaryRequest>('advance_salaries', data)
+  saveAdvanceSalaries: (data: AdvanceSalaryRequest[]) => writeData<AdvanceSalaryRequest>('advance_salaries', data),
+
+  getSuppliers: () => readData<Supplier>('suppliers', DEFAULT_SUPPLIERS),
+  saveSuppliers: (data: Supplier[]) => writeData<Supplier>('suppliers', data)
 };
 
 export function checkLowStockAndTriggerAlert(productId: string, productName: string, newQty: number, threshold: number): LowStockAlertLog | null {
